@@ -1,0 +1,89 @@
+<resources>
+    <!-- 应用基础信息 -->
+    <string name="app_name">墨水屏AI阅读器</string>
+    <string name="app_description">专为墨水屏设备打造的智能EPUB阅读器</string>
+    
+    <!-- 主界面 -->
+    <string name="main_title">我的图书馆</string>
+    <string name="menu_settings">设置</string>
+    <string name="menu_about">关于</string>
+    
+    <!-- 图书管理 -->
+    <string name="book_import">导入图书</string>
+    <string name="book_delete">删除图书</string>
+    <string name="book_info">图书信息</string>
+    <string name="no_books_message">还没有图书，点击"+"导入EPUB文件</string>
+    
+    <!-- 阅读界面 -->
+    <string name="reading_progress">阅读进度: %1$d%%</string>
+    <string name="chapter_title">第%1$d章</string>
+    <string name="page_indicator">%1$d / %2$d</string>
+    
+    <!-- AI功能 -->
+    <string name="ai_dialog_title">AI助手</string>
+    <string name="ai_thinking">AI正在思考中...</string>
+    <string name="ai_error">AI服务暂时不可用，请稍后重试</string>
+    <string name="voice_input">语音输入</string>
+    <string name="voice_recording">正在录音...</string>
+    <string name="voice_processing">正在处理语音...</string>
+    
+    <!-- AI问题类型 -->
+    <string name="question_type_concept">概念解释</string>
+    <string name="question_type_translation">中英翻译</string>
+    <string name="question_type_vocabulary">英语学习</string>
+    <string name="question_type_summary">内容总结</string>
+    <string name="question_type_extension">扩展阅读</string>
+    <string name="question_type_custom">自定义问题</string>
+    
+    <!-- 设置 -->
+    <string name="settings_title">设置</string>
+    <string name="settings_reading">阅读设置</string>
+    <string name="settings_ai">AI设置</string>
+    <string name="settings_display">显示设置</string>
+    <string name="settings_about">关于应用</string>
+    
+    <!-- AI设置 -->
+    <string name="ai_api_key">OpenAI API密钥</string>
+    <string name="ai_api_key_hint">请输入您的OpenAI API密钥</string>
+    <string name="ai_api_key_help">获取API密钥请访问 platform.openai.com</string>
+    <string name="ai_model_selection">AI模型选择</string>
+    <string name="ai_response_language">回答语言</string>
+    
+    <!-- 显示设置 -->
+    <string name="display_text_size">字体大小</string>
+    <string name="display_line_spacing">行间距</string>
+    <string name="display_margin">页面边距</string>
+    <string name="display_theme">主题</string>
+    <string name="display_refresh_mode">刷新模式</string>
+    
+    <!-- 权限请求 -->
+    <string name="permission_storage_title">存储权限</string>
+    <string name="permission_storage_message">需要存储权限来读取EPUB文件</string>
+    <string name="permission_microphone_title">麦克风权限</string>
+    <string name="permission_microphone_message">需要麦克风权限来使用语音输入功能</string>
+    <string name="permission_grant">授予权限</string>
+    <string name="permission_deny">拒绝</string>
+    
+    <!-- 错误消息 -->
+    <string name="error_file_not_found">文件未找到</string>
+    <string name="error_invalid_epub">无效的EPUB文件</string>
+    <string name="error_network_unavailable">网络不可用</string>
+    <string name="error_api_key_invalid">API密钥无效</string>
+    <string name="error_unknown">未知错误</string>
+    
+    <!-- 通用按钮 -->
+    <string name="ok">确定</string>
+    <string name="cancel">取消</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="share">分享</string>
+    <string name="retry">重试</string>
+    <string name="close">关闭</string>
+    
+    <!-- 加载状态 -->
+    <string name="loading">加载中...</string>
+    <string name="parsing_epub">正在解析EPUB文件...</string>
+    <string name="saving">保存中...</string>
+    
+</resources> 
