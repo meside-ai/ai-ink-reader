@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 应用内部存储的files目录 -->
+    <files-path name="epub_books" path="epub_books/" />
+    
+    <!-- 应用缓存目录 -->
+    <cache-path name="cache" path="." />
+    <cache-path name="covers" path="covers/" />
+    
+    <!-- 外部存储的应用私有目录 -->
+    <external-files-path name="external_files" path="." />
+    
+    <!-- 外部缓存目录 -->
+    <external-cache-path name="external_cache" path="." />
+</paths> 

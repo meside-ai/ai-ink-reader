@@ -3,19 +3,20 @@ package com.newbiechen.inkreader.domain.usecases.base
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Use Case基类
- * 
+ *
  * 提供统一的用例执行模式，确保所有业务逻辑都在后台线程执行
  */
 abstract class UseCase<in P, R>(
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-    
+
     /**
      * 执行用例
-     * 
+     *
      * @param parameters 用例参数
      * @return 执行结果
      */
@@ -28,7 +29,7 @@ abstract class UseCase<in P, R>(
             Result.failure(exception)
         }
     }
-    
+
     /**
      * 具体的用例执行逻辑，由子类实现
      */
@@ -42,7 +43,7 @@ abstract class UseCase<in P, R>(
 abstract class NoParameterUseCase<R>(
     coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : UseCase<Unit, R>(coroutineDispatcher) {
-    
+
     suspend operator fun invoke(): Result<R> {
         return invoke(Unit)
     }
@@ -50,16 +51,28 @@ abstract class NoParameterUseCase<R>(
 
 /**
  * Flow Use Case基类
- * 
+ *
  * 用于返回Flow类型的用例，通常用于观察数据变化
  */
 abstract class FlowUseCase<in P, R>(
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-    
-    suspend operator fun invoke(parameters: P) = withContext(coroutineDispatcher) {
+
+    suspend operator fun invoke(parameters: P): Flow<R> = withContext(coroutineDispatcher) {
         execute(parameters)
     }
-    
-    protected abstract suspend fun execute(parameters: P): kotlinx.coroutines.flow.Flow<R>
+
+    protected abstract suspend fun execute(parameters: P): Flow<R>
+}
+
+/**
+ * 无参数的Flow Use Case基类
+ */
+abstract class NoParameterFlowUseCase<R>(
+    coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : FlowUseCase<Unit, R>(coroutineDispatcher) {
+
+    suspend operator fun invoke(): Flow<R> {
+        return invoke(Unit)
+    }
 } 

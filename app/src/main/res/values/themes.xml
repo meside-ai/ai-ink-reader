@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    
+    <!-- 墨水屏阅读器主题 - Light -->
+    <style name="Theme.InkReader" parent="Theme.Material3.DayNight">
+        <!-- 主色调 - 使用灰色系，适合墨水屏显示 -->
+        <item name="colorPrimary">@color/primary_color</item>
+        <item name="colorOnPrimary">@color/on_primary_color</item>
+        <item name="colorPrimaryContainer">@color/primary_container_color</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_container_color</item>
+        
+        <!-- 次要色调 -->
+        <item name="colorSecondary">@color/secondary_color</item>
+        <item name="colorOnSecondary">@color/on_secondary_color</item>
+        <item name="colorSecondaryContainer">@color/secondary_container_color</item>
+        <item name="colorOnSecondaryContainer">@color/on_secondary_container_color</item>
+        
+        <!-- 背景色 -->
+        <item name="colorSurface">@color/surface_color</item>
+        <item name="colorOnSurface">@color/on_surface_color</item>
+        <item name="android:colorBackground">@color/background_color</item>
+        <item name="colorOnBackground">@color/on_background_color</item>
+        
+        <!-- 状态栏 -->
+        <item name="android:statusBarColor">@color/status_bar_color</item>
+        <item name="android:windowLightStatusBar">true</item>
+        
+        <!-- 导航栏 -->
+        <item name="android:navigationBarColor">@color/navigation_bar_color</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        
+        <!-- 其他属性 -->
+        <item name="android:windowBackground">@color/window_background_color</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+    
+    <!-- 阅读界面主题 - 专为长时间阅读优化 -->
+    <style name="Theme.InkReader.Reading" parent="Theme.InkReader">
+        <!-- 隐藏状态栏，提供沉浸式阅读体验 -->
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        
+        <!-- 保持屏幕常亮 -->
+        <item name="android:keepScreenOn">true</item>
+        
+        <!-- 阅读专用背景色 -->
+        <item name="android:windowBackground">@color/reading_background_color</item>
+    </style>
+    
+    <!-- Splash Screen主题 -->
+    <style name="Theme.InkReader.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background_color</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.InkReader</item>
+    </style>
+    
+</resources> 

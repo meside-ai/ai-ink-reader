@@ -2,23 +2,44 @@
     <!-- 应用基础信息 -->
     <string name="app_name">墨水屏AI阅读器</string>
     <string name="app_description">专为墨水屏设备打造的智能EPUB阅读器</string>
-    
+
     <!-- 主界面 -->
     <string name="main_title">我的图书馆</string>
     <string name="menu_settings">设置</string>
     <string name="menu_about">关于</string>
-    
+
     <!-- 图书管理 -->
     <string name="book_import">导入图书</string>
     <string name="book_delete">删除图书</string>
     <string name="book_info">图书信息</string>
-    <string name="no_books_message">还没有图书，点击"+"导入EPUB文件</string>
-    
+    <string name="no_books_message">还没有图书</string>
+    <string name="no_books_hint">点击右下角的"+"按钮导入EPUB文件开始阅读</string>
+
+    <!-- 搜索功能 -->
+    <string name="search_books_hint">搜索图书标题或作者</string>
+    <string name="search_results_empty">没有找到相关图书</string>
+    <string name="search_results_count">找到 %1$d 本图书</string>
+
+    <!-- 选择模式 -->
+    <string name="selected_count">已选择 %1$d 本图书</string>
+    <string name="select_all">全选</string>
+    <string name="select_none">取消全选</string>
+    <string name="delete_selected">删除选中</string>
+
+    <!-- 图书列表项 -->
+    <string name="book_cover_description">图书封面</string>
+    <string name="more_options">更多选项</string>
+    <string name="sample_book_title">示例图书标题</string>
+    <string name="sample_book_author">示例作者</string>
+    <string name="sample_book_size">2.5MB</string>
+    <string name="sample_book_chapters">15章</string>
+    <string name="sample_last_read_time">3天前阅读</string>
+
     <!-- 阅读界面 -->
     <string name="reading_progress">阅读进度: %1$d%%</string>
     <string name="chapter_title">第%1$d章</string>
     <string name="page_indicator">%1$d / %2$d</string>
-    
+
     <!-- AI功能 -->
     <string name="ai_dialog_title">AI助手</string>
     <string name="ai_thinking">AI正在思考中...</string>
@@ -26,64 +47,88 @@
     <string name="voice_input">语音输入</string>
     <string name="voice_recording">正在录音...</string>
     <string name="voice_processing">正在处理语音...</string>
-    
+
     <!-- AI问题类型 -->
     <string name="question_type_concept">概念解释</string>
     <string name="question_type_translation">中英翻译</string>
     <string name="question_type_vocabulary">英语学习</string>
     <string name="question_type_summary">内容总结</string>
-    <string name="question_type_extension">扩展阅读</string>
+    <string name="question_type_extended">扩展阅读</string>
     <string name="question_type_custom">自定义问题</string>
-    
+
     <!-- 设置 -->
     <string name="settings_title">设置</string>
     <string name="settings_reading">阅读设置</string>
     <string name="settings_ai">AI设置</string>
-    <string name="settings_display">显示设置</string>
+    <string name="settings_storage">存储设置</string>
     <string name="settings_about">关于应用</string>
-    
+
+    <!-- 阅读设置 -->
+    <string name="font_size">字体大小</string>
+    <string name="font_family">字体样式</string>
+    <string name="line_spacing">行间距</string>
+    <string name="page_margin">页边距</string>
+    <string name="night_mode">夜间模式</string>
+    <string name="page_turning_animation">翻页动画</string>
+
     <!-- AI设置 -->
-    <string name="ai_api_key">OpenAI API密钥</string>
-    <string name="ai_api_key_hint">请输入您的OpenAI API密钥</string>
-    <string name="ai_api_key_help">获取API密钥请访问 platform.openai.com</string>
-    <string name="ai_model_selection">AI模型选择</string>
-    <string name="ai_response_language">回答语言</string>
-    
-    <!-- 显示设置 -->
-    <string name="display_text_size">字体大小</string>
-    <string name="display_line_spacing">行间距</string>
-    <string name="display_margin">页面边距</string>
-    <string name="display_theme">主题</string>
-    <string name="display_refresh_mode">刷新模式</string>
-    
-    <!-- 权限请求 -->
+    <string name="ai_api_key">OpenAI API Key</string>
+    <string name="ai_model">AI模型</string>
+    <string name="ai_temperature">创造性</string>
+    <string name="ai_max_tokens">最大回复长度</string>
+
+    <!-- 权限相关 -->
     <string name="permission_storage_title">存储权限</string>
-    <string name="permission_storage_message">需要存储权限来读取EPUB文件</string>
+    <string name="permission_storage_message">需要存储权限来导入和管理EPUB文件</string>
     <string name="permission_microphone_title">麦克风权限</string>
     <string name="permission_microphone_message">需要麦克风权限来使用语音输入功能</string>
-    <string name="permission_grant">授予权限</string>
-    <string name="permission_deny">拒绝</string>
-    
-    <!-- 错误消息 -->
-    <string name="error_file_not_found">文件未找到</string>
-    <string name="error_invalid_epub">无效的EPUB文件</string>
-    <string name="error_network_unavailable">网络不可用</string>
-    <string name="error_api_key_invalid">API密钥无效</string>
+    <string name="permission_denied">权限被拒绝</string>
+    <string name="permission_required">需要相关权限才能使用此功能</string>
+
+    <!-- 错误信息 -->
     <string name="error_unknown">未知错误</string>
-    
+    <string name="error_network">网络连接失败</string>
+    <string name="error_file_not_found">文件不存在</string>
+    <string name="error_file_corrupted">文件已损坏</string>
+    <string name="error_parsing_epub">EPUB文件解析失败</string>
+    <string name="error_storage_full">存储空间不足</string>
+    <string name="error_ai_service">AI服务暂时不可用</string>
+
+    <!-- 成功信息 -->
+    <string name="success_book_imported">图书导入成功</string>
+    <string name="success_book_deleted">图书删除成功</string>
+    <string name="success_settings_saved">设置保存成功</string>
+
     <!-- 通用按钮 -->
     <string name="ok">确定</string>
     <string name="cancel">取消</string>
-    <string name="save">保存</string>
     <string name="delete">删除</string>
     <string name="edit">编辑</string>
-    <string name="share">分享</string>
+    <string name="save">保存</string>
     <string name="retry">重试</string>
     <string name="close">关闭</string>
-    
-    <!-- 加载状态 -->
+    <string name="back">返回</string>
+    <string name="next">下一页</string>
+    <string name="previous">上一页</string>
+    <string name="refresh">刷新</string>
+
+    <!-- 状态指示 -->
     <string name="loading">加载中...</string>
-    <string name="parsing_epub">正在解析EPUB文件...</string>
-    <string name="saving">保存中...</string>
-    
+    <string name="processing">处理中...</string>
+    <string name="completed">已完成</string>
+    <string name="failed">失败</string>
+
+    <!-- 时间格式 -->
+    <string name="time_just_now">刚刚</string>
+    <string name="time_minutes_ago">%1$d分钟前</string>
+    <string name="time_hours_ago">%1$d小时前</string>
+    <string name="time_days_ago">%1$d天前</string>
+    <string name="time_months_ago">%1$d个月前</string>
+
+    <!-- 统计信息 -->
+    <string name="total_books">共%1$d本图书</string>
+    <string name="total_chapters">共%1$d章</string>
+    <string name="total_size">总大小: %1$s</string>
+    <string name="reading_time">阅读时长: %1$s</string>
+
 </resources> 

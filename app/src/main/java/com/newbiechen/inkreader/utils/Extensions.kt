@@ -6,8 +6,10 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
+import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.Result
 
 /**
  * Android相关扩展函数
@@ -28,33 +30,32 @@ fun Fragment.showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
 }
 
 /**
- * Context扩展 - dp转px
+ * DP转PX
  */
-fun Context.dpToPx(dp: Float): Int {
-    return (dp * resources.displayMetrics.density + 0.5f).toInt()
+fun Context.dpToPx(dp: Float): Float {
+    return dp * resources.displayMetrics.density
 }
 
 /**
- * Context扩展 - px转dp
+ * PX转DP
  */
-fun Context.pxToDp(px: Float): Int {
-    return (px / resources.displayMetrics.density + 0.5f).toInt()
+fun Context.pxToDp(px: Float): Float {
+    return px / resources.displayMetrics.density
 }
 
 /**
- * LiveData扩展 - 简化观察
+ * LiveData扩展 - 安全观察
  */
-fun <T> LiveData<T>.observeOnce(owner: LifecycleOwner, observer: (T) -> Unit) {
-    observe(owner, object : Observer<T> {
-        override fun onChanged(value: T) {
-            removeObserver(this)
-            observer(value)
-        }
-    })
+fun <T> LiveData<T>.observeSafely(owner: LifecycleOwner, observer: Observer<T>) {
+    try {
+        observe(owner, observer)
+    } catch (e: Exception) {
+        Timber.e(e, "LiveData观察失败")
+    }
 }
 
 /**
- * 字符串和数据处理扩展函数
+ * 通用扩展函数
  */
 
 /**
@@ -65,76 +66,77 @@ fun String.isEpubFile(): Boolean {
 }
 
 /**
- * String扩展 - 获取文件名（不含扩展名）
+ * String扩展 - 从文件路径获取文件名
+ */
+fun String.getFileName(): String {
+    return substringAfterLast("/").substringAfterLast("\\")
+}
+
+/**
+ * String扩展 - 从文件路径获取不含扩展名的文件名
  */
 fun String.getFileNameWithoutExtension(): String {
-    return this.substringAfterLast("/").substringBeforeLast(".")
+    return getFileName().substringBeforeLast(".")
 }
 
 /**
  * String扩展 - 获取文件扩展名
  */
 fun String.getFileExtension(): String {
-    return this.substringAfterLast(".", "")
+    return substringAfterLast(".", "")
 }
 
 /**
- * String扩展 - 截取指定长度的字符串并添加省略号
+ * String扩展 - 截断字符串
  */
-fun String.truncate(maxLength: Int): String {
-    return if (this.length <= maxLength) {
+fun String.truncate(maxLength: Int, suffix: String = "..."): String {
+    return if (length <= maxLength) {
         this
     } else {
-        this.take(maxLength) + "..."
+        take(maxLength - suffix.length) + suffix
     }
 }
 
 /**
  * String扩展 - 移除HTML标签
  */
-fun String.stripHtml(): String {
-    return this.replace(Regex("<[^>]*>"), "")
+fun String.stripHtmlTags(): String {
+    return replace(Regex("<[^>]*>"), "")
 }
 
 /**
- * 时间处理扩展函数
+ * String扩展 - 安全的整数转换
  */
-
-/**
- * Long扩展 - 时间戳转可读时间格式
- */
-fun Long.toReadableTime(): String {
-    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-    return sdf.format(Date(this))
-}
-
-/**
- * Long扩展 - 时间戳转日期格式
- */
-fun Long.toDateString(): String {
-    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    return sdf.format(Date(this))
-}
-
-/**
- * Long扩展 - 计算相对时间（几分钟前、几小时前等）
- */
-fun Long.toRelativeTime(): String {
-    val now = System.currentTimeMillis()
-    val diff = now - this
-    
-    return when {
-        diff < 60_000 -> "刚刚" // 1分钟内
-        diff < 3600_000 -> "${diff / 60_000}分钟前" // 1小时内
-        diff < 86400_000 -> "${diff / 3600_000}小时前" // 1天内
-        diff < 2592000_000 -> "${diff / 86400_000}天前" // 30天内
-        else -> this.toDateString() // 超过30天显示具体日期
+fun String.toIntSafely(defaultValue: Int = 0): Int {
+    return try {
+        toInt()
+    } catch (e: NumberFormatException) {
+        defaultValue
     }
 }
 
 /**
- * 文件大小处理扩展函数
+ * String扩展 - 安全的长整数转换
  */
+fun String.toLongSafely(defaultValue: Long = 0L): Long {
+    return try {
+        toLong()
+    } catch (e: NumberFormatException) {
+        defaultValue
+    }
+}
+
+/**
+ * Long扩展 - 时间戳转日期字符串
+ */
+fun Long.toDateString(pattern: String = "yyyy-MM-dd HH:mm:ss"): String {
+    return try {
+        val dateFormat = SimpleDateFormat(pattern, Locale.getDefault())
+        dateFormat.format(Date(this))
+    } catch (e: Exception) {
+        ""
+    }
+}
 
 /**
  * Long扩展 - 字节数转可读文件大小格式
@@ -143,12 +145,12 @@ fun Long.toReadableFileSize(): String {
     val units = arrayOf("B", "KB", "MB", "GB")
     var size = this.toDouble()
     var unitIndex = 0
-    
+
     while (size >= 1024 && unitIndex < units.size - 1) {
         size /= 1024
         unitIndex++
     }
-    
+
     return if (unitIndex == 0) {
         "${size.toInt()}${units[unitIndex]}"
     } else {
@@ -157,51 +159,87 @@ fun Long.toReadableFileSize(): String {
 }
 
 /**
- * 集合处理扩展函数
+ * List扩展 - 安全获取元素
  */
-
-/**
- * List扩展 - 安全的get操作
- */
-fun <T> List<T>.safeGet(index: Int): T? {
-    return if (index >= 0 && index < size) get(index) else null
+fun <T> List<T>.getSafely(index: Int): T? {
+    return if (index in 0 until size) {
+        get(index)
+    } else {
+        null
+    }
 }
 
 /**
- * 异常处理扩展函数
+ * List扩展 - 安全获取元素或默认值
+ */
+fun <T> List<T>.getSafelyOrDefault(index: Int, defaultValue: T): T {
+    return getSafely(index) ?: defaultValue
+}
+
+/**
+ * 工具函数
  */
 
 /**
- * Result扩展 - 安全执行操作
+ * 安全执行函数 - 捕获异常并返回Result
  */
-inline fun <T, R> T.runSafely(action: T.() -> R): Result<R> {
+inline fun <T> runSafely(action: () -> T): Result<T> {
     return try {
         Result.success(action())
     } catch (e: Exception) {
+        Timber.e(e, "执行操作失败")
         Result.failure(e)
     }
 }
 
 /**
- * 其他工具扩展函数
+ * 安全执行函数 - 带默认值
  */
-
-/**
- * Any扩展 - 空安全执行
- */
-inline fun <T> T.applyIf(condition: Boolean, block: T.() -> T): T {
-    return if (condition) block() else this
+inline fun <T> runSafelyWithDefault(defaultValue: T, action: () -> T): T {
+    return try {
+        action()
+    } catch (e: Exception) {
+        Timber.e(e, "执行操作失败，返回默认值")
+        defaultValue
+    }
 }
 
 /**
- * Boolean扩展 - 条件执行
+ * 延迟执行
  */
-inline fun Boolean.ifTrue(block: () -> Unit): Boolean {
-    if (this) block()
-    return this
+suspend fun delay(millis: Long) {
+    kotlinx.coroutines.delay(millis)
 }
 
-inline fun Boolean.ifFalse(block: () -> Unit): Boolean {
-    if (!this) block()
-    return this
+/**
+ * 条件执行
+ */
+inline fun <T> T.takeIfNotNull(predicate: (T) -> Boolean): T? {
+    return if (predicate(this)) this else null
+}
+
+/**
+ * 安全转换
+ */
+inline fun <T, R> T.mapSafely(transform: (T) -> R): R? {
+    return try {
+        transform(this)
+    } catch (e: Exception) {
+        Timber.e(e, "转换失败")
+        null
+    }
+}
+
+/**
+ * 判断字符串是否为空或空白
+ */
+fun String?.isNullOrEmpty(): Boolean {
+    return this?.isBlank() ?: true
+}
+
+/**
+ * 判断字符串是否不为空且不为空白
+ */
+fun String?.isNotNullAndNotEmpty(): Boolean {
+    return !isNullOrEmpty()
 } 

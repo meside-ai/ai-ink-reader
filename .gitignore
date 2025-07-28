@@ -29,4 +29,39 @@ node_modules/
 
 # Build outputs
 dist/
-build/ 
+build/
+
+# Android specific
+*.iml
+*.hprof
+
+# Gradle files
+.gradle/
+gradle.properties
+local.properties
+
+# Android build outputs
+/build/
+app/build/
+buildSrc/build/
+buildSrc/.gradle/
+
+# Android Studio cache files
+.externalNativeBuild/
+.cxx/
+
+# Android NDK
+obj/
+
+# Proguard generated files
+proguard/
+
+# Release keystore files
+*.keystore
+*.jks
+
+# Google Services (Firebase)
+google-services.json
+
+# Signing files
+signing.properties 
