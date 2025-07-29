@@ -8,18 +8,16 @@ import com.newbiechen.inkreader.domain.entities.Book
 
 /**
  * 图书数据库实体类
- * 
- * 映射图书信息到数据库表，包含索引优化和数据约束
  */
 @Entity(
     tableName = "books",
     indices = [
         Index(value = ["book_id"]),
-        Index(value = ["file_path"], unique = true), // 文件路径唯一索引
+        Index(value = ["file_path"], unique = true),
         Index(value = ["created_at"]),
         Index(value = ["last_opened_at"]),
         Index(value = ["is_deleted"]),
-        Index(value = ["author", "title"]) // 复合索引支持搜索
+        Index(value = ["author", "title"])
     ]
 )
 data class BookEntity(
@@ -62,7 +60,7 @@ data class BookEntity(
 )
 
 /**
- * 扩展函数：Entity转换为Domain对象
+ * Entity转换为Domain对象
  */
 fun BookEntity.toDomain(): Book {
     return Book(
@@ -82,7 +80,7 @@ fun BookEntity.toDomain(): Book {
 }
 
 /**
- * 扩展函数：Domain对象转换为Entity
+ * Domain对象转换为Entity
  */
 fun Book.toEntity(): BookEntity {
     return BookEntity(

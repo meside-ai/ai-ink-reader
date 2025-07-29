@@ -49,11 +49,11 @@
         <item name="android:windowBackground">@color/reading_background_color</item>
     </style>
     
-    <!-- Splash Screen主题 -->
-    <style name="Theme.InkReader.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/splash_background_color</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="postSplashScreenTheme">@style/Theme.InkReader</item>
+    <!-- Splash Screen主题 - 使用标准主题 -->
+    <style name="Theme.InkReader.Splash" parent="Theme.InkReader">
+        <item name="android:windowBackground">@color/splash_background_color</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">false</item>
     </style>
     
 </resources> 

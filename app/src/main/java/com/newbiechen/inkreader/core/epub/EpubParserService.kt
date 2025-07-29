@@ -1,526 +1,233 @@
 package com.newbiechen.inkreader.core.epub
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import com.newbiechen.inkreader.core.epub.models.EpubChapter
+import com.newbiechen.inkreader.core.epub.models.EpubMetadata
+import com.newbiechen.inkreader.core.epub.models.ValidationResult
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import nl.siegmann.epublib.domain.Book
+import nl.siegmann.epublib.epub.EpubReader
 import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import timber.log.Timber
-import java.io.*
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
+import org.jsoup.safety.Safelist
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
-import com.newbiechen.inkreader.core.epub.models.*
-import com.newbiechen.inkreader.utils.runSafely
-import java.util.UUID
 
-/**
- * EPUB解析服务实现
- * 
- * 负责解析EPUB文件，提取元数据、章节信息和内容
- */
+interface EpubParserService {
+    suspend fun parseEpub(filePath: String): Result<EpubMetadata>
+    suspend fun extractChapters(filePath: String): Result<List<EpubChapter>>
+    suspend fun getChapterContent(filePath: String, chapterHref: String): Result<String>
+    suspend fun extractCoverImage(filePath: String, outputDir: String): Result<String?>
+    suspend fun validateEpubFile(filePath: String): ValidationResult
+    suspend fun getWordCount(htmlContent: String): Int
+}
+
 @Singleton
-class EpubParserService @Inject constructor(
+class EpubParserServiceImpl @Inject constructor(
     @ApplicationContext private val context: Context
-) {
-    
-    companion object {
-        private const val CONTAINER_PATH = "META-INF/container.xml"
-        private const val MIMETYPE_PATH = "mimetype"
-        private const val EXPECTED_MIMETYPE = "application/epub+zip"
-        
-        // 支持的图片格式
-        private val SUPPORTED_IMAGE_FORMATS = setOf("jpg", "jpeg", "png", "gif", "webp", "svg")
-        
-        // 平均阅读速度（字符/分钟）
-        private const val AVERAGE_READING_SPEED = 200
-    }
-    
-    /**
-     * 解析EPUB文件并返回元数据
-     */
-    suspend fun parseEpub(filePath: String): EpubParseResult = withContext(Dispatchers.IO) {
-        runSafely {
-            Timber.d("开始解析EPUB文件: $filePath")
-            
-            val file = File(filePath)
-            if (!file.exists() || !file.canRead()) {
-                throw FileNotFoundException("EPUB文件不存在或无法读取: $filePath")
-            }
-            
-            // 验证EPUB文件格式
-            validateEpubFile(file)
-            
-            // 解析EPUB内容
-            val metadata = parseEpubContent(file)
-            
-            Timber.d("EPUB解析完成: ${metadata.title}, 章节数: ${metadata.chapters.size}")
-            EpubParseResult.Success(metadata)
-            
-        }.getOrElse { exception ->
-            Timber.e(exception, "EPUB解析失败: $filePath")
-            EpubParseResult.Error(exception, "EPUB文件解析失败: ${exception.message}")
+) : EpubParserService {
+
+    private val epubReader = EpubReader()
+
+    override suspend fun parseEpub(filePath: String): Result<EpubMetadata> = withContext(Dispatchers.IO) {
+        try {
+            val inputStream = FileInputStream(filePath)
+            val book = epubReader.readEpub(inputStream)
+            inputStream.close()
+
+            val metadata = book.metadata
+            val chapters = book.spine.spineReferences
+
+            val epubMetadata = EpubMetadata(
+                title = metadata.titles.firstOrNull() ?: "Unknown Title",
+                author = metadata.authors.firstOrNull()?.let { "${it.firstname} ${it.lastname}".trim() } ?: "Unknown Author",
+                publisher = metadata.publishers.firstOrNull() ?: null,
+                language = metadata.language ?: "zh-CN",
+                identifier = metadata.identifiers.firstOrNull()?.value,
+                description = metadata.descriptions.firstOrNull(),
+                subjects = metadata.subjects.toList(),
+                publishDate = metadata.dates.firstOrNull()?.value,
+                rights = metadata.rights.firstOrNull(),
+                totalChapters = chapters.size,
+                wordCount = 0 // Will be calculated during chapter processing
+            )
+
+            Result.success(epubMetadata)
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to parse EPUB: ${e.message}", e))
         }
     }
-    
-    /**
-     * 验证EPUB文件格式
-     */
-    private fun validateEpubFile(file: File) {
-        ZipInputStream(FileInputStream(file)).use { zipStream ->
-            var entry: ZipEntry?
-            var hasMimetype = false
-            
-            while (zipStream.nextEntry.also { entry = it } != null) {
-                if (entry?.name == MIMETYPE_PATH) {
-                    val mimetype = zipStream.readBytes().toString(Charsets.UTF_8).trim()
-                    if (mimetype != EXPECTED_MIMETYPE) {
-                        throw IllegalArgumentException("无效的EPUB文件类型: $mimetype")
-                    }
-                    hasMimetype = true
-                    break
-                }
-            }
-            
-            if (!hasMimetype) {
-                throw IllegalArgumentException("缺少mimetype文件，不是有效的EPUB格式")
-            }
-        }
-    }
-    
-    /**
-     * 解析EPUB内容
-     */
-    private fun parseEpubContent(file: File): EpubMetadata {
-        val zipEntries = mutableMapOf<String, ByteArray>()
-        
-        // 读取所有ZIP条目到内存
-        ZipInputStream(FileInputStream(file)).use { zipStream ->
-            var entry: ZipEntry?
-            while (zipStream.nextEntry.also { entry = it } != null) {
-                entry?.let { zipEntry ->
-                    if (!zipEntry.isDirectory) {
-                        zipEntries[zipEntry.name] = zipStream.readBytes()
-                    }
-                }
-            }
-        }
-        
-        // 解析container.xml获取rootfile路径
-        val containerXml = zipEntries[CONTAINER_PATH]
-            ?: throw IllegalArgumentException("缺少container.xml文件")
-        
-        val rootfilePath = parseContainerXml(containerXml)
-        
-        // 解析rootfile（通常是.opf文件）
-        val rootfileContent = zipEntries[rootfilePath]
-            ?: throw IllegalArgumentException("找不到rootfile: $rootfilePath")
-        
-        return parseOpfFile(rootfileContent, zipEntries, file.absolutePath, file.length(), rootfilePath)
-    }
-    
-    /**
-     * 解析container.xml文件
-     */
-    private fun parseContainerXml(containerData: ByteArray): String {
-        val containerXml = String(containerData, Charsets.UTF_8)
-        val doc = Jsoup.parse(containerXml, "", org.jsoup.parser.Parser.xmlParser())
-        
-        val rootfileElement = doc.selectFirst("rootfile")
-            ?: throw IllegalArgumentException("container.xml中找不到rootfile元素")
-        
-        return rootfileElement.attr("full-path")
-            .takeIf { it.isNotBlank() }
-            ?: throw IllegalArgumentException("rootfile路径为空")
-    }
-    
-    /**
-     * 解析OPF文件（EPUB的核心元数据文件）
-     */
-    private fun parseOpfFile(
-        opfData: ByteArray,
-        zipEntries: Map<String, ByteArray>,
-        filePath: String,
-        fileSize: Long,
-        opfPath: String
-    ): EpubMetadata {
-        val opfContent = String(opfData, Charsets.UTF_8)
-        val doc = Jsoup.parse(opfContent, "", org.jsoup.parser.Parser.xmlParser())
-        
-        // 解析元数据
-        val metadata = parseMetadata(doc)
-        
-        // 解析manifest（资源清单）
-        val manifest = parseManifest(doc, opfPath)
-        
-        // 解析spine（阅读顺序）
-        val spine = parseSpine(doc)
-        
-        // 解析导航信息（TOC）
-        val chapters = parseNavigation(zipEntries, manifest, spine, opfPath)
-        
-        // 处理封面图片
-        val coverImagePath = extractCoverImage(zipEntries, manifest, filePath)
-        
-        return EpubMetadata(
-            bookId = UUID.randomUUID().toString(),
-            title = metadata["title"] ?: "未知标题",
-            author = metadata["creator"] ?: "未知作者",
-            publisher = metadata["publisher"],
-            description = metadata["description"],
-            language = metadata["language"] ?: "zh-CN",
-            isbn = metadata["identifier"],
-            publicationDate = metadata["date"],
-            coverImagePath = coverImagePath,
-            filePath = filePath,
-            fileSize = fileSize,
-            totalChapters = chapters.size,
-            chapters = chapters,
-            spine = spine,
-            manifest = manifest
-        )
-    }
-    
-    /**
-     * 解析OPF元数据
-     */
-    private fun parseMetadata(doc: Document): Map<String, String> {
-        val metadata = mutableMapOf<String, String>()
-        
-        doc.select("metadata > *").forEach { element ->
-            val tagName = element.tagName().lowercase()
-            val content = element.text().trim()
-            
-            when (tagName) {
-                "dc:title" -> metadata["title"] = content
-                "dc:creator" -> metadata["creator"] = content
-                "dc:publisher" -> metadata["publisher"] = content
-                "dc:description" -> metadata["description"] = content
-                "dc:language" -> metadata["language"] = content
-                "dc:identifier" -> metadata["identifier"] = content
-                "dc:date" -> metadata["date"] = content
-                "meta" -> {
-                    // 处理meta标签
-                    val name = element.attr("name")
-                    val property = element.attr("property")
-                    val content = element.attr("content")
-                    
-                    when {
-                        name.isNotBlank() -> metadata[name] = content
-                        property.isNotBlank() -> metadata[property] = content
-                    }
-                }
-            }
-        }
-        
-        return metadata
-    }
-    
-    /**
-     * 解析manifest（资源清单）
-     */
-    private fun parseManifest(doc: Document, opfPath: String): Map<String, ManifestItem> {
-        val manifest = mutableMapOf<String, ManifestItem>()
-        val opfDir = File(opfPath).parent ?: ""
-        
-        doc.select("manifest item").forEach { item ->
-            val id = item.attr("id")
-            val href = item.attr("href")
-            val mediaType = item.attr("media-type")
-            val properties = item.attr("properties")
-                .split(" ")
-                .filter { it.isNotBlank() }
-            
-            if (id.isNotBlank() && href.isNotBlank()) {
-                // 处理相对路径
-                val fullHref = if (opfDir.isNotBlank()) {
-                    "$opfDir/$href".replace("//", "/")
-                } else {
-                    href
-                }
+
+    override suspend fun extractChapters(filePath: String): Result<List<EpubChapter>> = withContext(Dispatchers.IO) {
+        try {
+            val inputStream = FileInputStream(filePath)
+            val book = epubReader.readEpub(inputStream)
+            inputStream.close()
+
+            val chapters = mutableListOf<EpubChapter>()
+            val spineReferences = book.spine.spineReferences
+
+            spineReferences.forEachIndexed { index, spineReference ->
+                val resource = spineReference.resource
+                val content = String(resource.data, Charsets.UTF_8)
+                val cleanContent = cleanHtmlContent(content)
+                val wordCount = getWordCount(cleanContent)
                 
-                manifest[id] = ManifestItem(
-                    id = id,
-                    href = fullHref,
-                    mediaType = mediaType,
-                    properties = properties
-                )
-            }
-        }
-        
-        return manifest
-    }
-    
-    /**
-     * 解析spine（阅读顺序）
-     */
-    private fun parseSpine(doc: Document): List<String> {
-        return doc.select("spine itemref").map { itemref ->
-            itemref.attr("idref")
-        }.filter { it.isNotBlank() }
-    }
-    
-    /**
-     * 解析导航信息生成章节列表
-     */
-    private fun parseNavigation(
-        zipEntries: Map<String, ByteArray>,
-        manifest: Map<String, ManifestItem>,
-        spine: List<String>,
-        opfPath: String
-    ): List<ChapterInfo> {
-        // 首先尝试解析EPUB3的nav文件
-        val navItem = manifest.values.find { it.isNavigation() }
-        if (navItem != null) {
-            val navContent = zipEntries[navItem.href]
-            if (navContent != null) {
-                return parseNavDocument(navContent)
-            }
-        }
-        
-        // 如果没有nav文件，根据spine生成章节
-        return generateChaptersFromSpine(zipEntries, manifest, spine)
-    }
-    
-    /**
-     * 解析EPUB3导航文档
-     */
-    private fun parseNavDocument(navData: ByteArray): List<ChapterInfo> {
-        val navContent = String(navData, Charsets.UTF_8)
-        val doc = Jsoup.parse(navContent)
-        val chapters = mutableListOf<ChapterInfo>()
-        
-        // 查找导航列表
-        doc.select("nav[epub:type=toc] ol li, nav ol li").forEach { li ->
-            val link = li.selectFirst("a")
-            if (link != null) {
-                val title = link.text().trim()
-                val href = link.attr("href")
-                
-                if (title.isNotBlank() && href.isNotBlank()) {
-                    // 分离锚点
-                    val (path, anchor) = if (href.contains("#")) {
-                        href.split("#", limit = 2).let { parts ->
-                            parts[0] to parts.getOrNull(1)
-                        }
-                    } else {
-                        href to null
-                    }
-                    
-                    chapters.add(
-                        ChapterInfo(
-                            title = title,
-                            href = path,
-                            anchor = anchor,
-                            level = getElementLevel(li)
-                        )
+                // Extract title from content or use default
+                val title = extractTitleFromHtml(content) ?: "Chapter ${index + 1}"
+
+                chapters.add(
+                    EpubChapter(
+                        id = resource.id ?: "${index}",
+                        title = title,
+                        href = resource.href,
+                        order = index,
+                        htmlContent = cleanContent,
+                        wordCount = wordCount
                     )
-                }
-            }
-        }
-        
-        return chapters
-    }
-    
-    /**
-     * 从spine生成章节列表
-     */
-    private fun generateChaptersFromSpine(
-        zipEntries: Map<String, ByteArray>,
-        manifest: Map<String, ManifestItem>,
-        spine: List<String>
-    ): List<ChapterInfo> {
-        return spine.mapIndexedNotNull { index, itemId ->
-            val manifestItem = manifest[itemId]
-            if (manifestItem?.isHtmlContent() == true) {
-                // 尝试从文件内容中提取标题
-                val content = zipEntries[manifestItem.href]
-                val title = if (content != null) {
-                    extractTitleFromContent(content) ?: "第${index + 1}章"
-                } else {
-                    "第${index + 1}章"
-                }
-                
-                ChapterInfo(
-                    title = title,
-                    href = manifestItem.href,
-                    level = 1
                 )
-            } else {
-                null
             }
+
+            Result.success(chapters)
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to extract chapters: ${e.message}", e))
         }
     }
-    
-    /**
-     * 从HTML内容中提取标题
-     */
-    private fun extractTitleFromContent(contentData: ByteArray): String? {
-        return try {
-            val content = String(contentData, Charsets.UTF_8)
-            val doc = Jsoup.parse(content)
-            
-            // 尝试多种方式提取标题
-            listOf("h1", "h2", "h3", "title").firstNotNullOfOrNull { selector ->
-                doc.selectFirst(selector)?.text()?.trim()?.takeIf { it.isNotBlank() }
+
+    override suspend fun getChapterContent(filePath: String, chapterHref: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val inputStream = FileInputStream(filePath)
+            val book = epubReader.readEpub(inputStream)
+            inputStream.close()
+
+            val resource = book.resources.getByHref(chapterHref)
+            if (resource != null) {
+                val content = String(resource.data, Charsets.UTF_8)
+                val cleanContent = cleanHtmlContent(content)
+                Result.success(cleanContent)
+            } else {
+                Result.failure(Exception("Chapter not found: $chapterHref"))
             }
         } catch (e: Exception) {
-            null
+            Result.failure(Exception("Failed to get chapter content: ${e.message}", e))
         }
     }
-    
-    /**
-     * 获取元素层级
-     */
-    private fun getElementLevel(element: org.jsoup.nodes.Element): Int {
-        var level = 1
-        var parent = element.parent()
-        
-        while (parent != null && parent.tagName() != "nav") {
-            if (parent.tagName() == "ol" || parent.tagName() == "ul") {
-                level++
+
+    override suspend fun extractCoverImage(filePath: String, outputDir: String): Result<String?> = withContext(Dispatchers.IO) {
+        try {
+            val inputStream = FileInputStream(filePath)
+            val book = epubReader.readEpub(inputStream)
+            inputStream.close()
+
+            val coverImage = book.coverImage
+            if (coverImage != null) {
+                val outputFile = File(outputDir, "cover_${System.currentTimeMillis()}.jpg")
+                val bitmap = BitmapFactory.decodeByteArray(coverImage.data, 0, coverImage.data.size)
+                
+                if (bitmap != null) {
+                    val outputStream = FileOutputStream(outputFile)
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+                    outputStream.close()
+                    Result.success(outputFile.absolutePath)
+                } else {
+                    Result.success(null)
+                }
+            } else {
+                Result.success(null)
             }
-            parent = parent.parent()
+        } catch (e: Exception) {
+            Result.failure(Exception("Failed to extract cover image: ${e.message}", e))
         }
-        
-        return level
     }
-    
-    /**
-     * 提取并保存封面图片
-     */
-    private fun extractCoverImage(
-        zipEntries: Map<String, ByteArray>,
-        manifest: Map<String, ManifestItem>,
-        epubPath: String
-    ): String? {
-        // 查找封面图片
-        val coverItem = manifest.values.find { item ->
-            item.isImage() && (
-                item.properties.contains("cover-image") ||
-                item.id.contains("cover", ignoreCase = true) ||
-                item.href.contains("cover", ignoreCase = true)
-            )
+
+    override suspend fun validateEpubFile(filePath: String): ValidationResult = withContext(Dispatchers.IO) {
+        try {
+            val file = File(filePath)
+            if (!file.exists()) {
+                return@withContext ValidationResult(false, "File does not exist")
+            }
+
+            if (!file.canRead()) {
+                return@withContext ValidationResult(false, "Cannot read file")
+            }
+
+            if (!filePath.lowercase().endsWith(".epub")) {
+                return@withContext ValidationResult(false, "File is not an EPUB file")
+            }
+
+            // Try to parse the EPUB
+            val inputStream = FileInputStream(filePath)
+            val book = epubReader.readEpub(inputStream)
+            inputStream.close()
+
+            val warnings = mutableListOf<String>()
+            
+            if (book.metadata.titles.isEmpty()) {
+                warnings.add("No title found")
+            }
+            
+            if (book.metadata.authors.isEmpty()) {
+                warnings.add("No author found")
+            }
+            
+            if (book.spine.spineReferences.isEmpty()) {
+                warnings.add("No chapters found")
+            }
+
+            ValidationResult(true, null, warnings)
+        } catch (e: Exception) {
+            ValidationResult(false, "Invalid EPUB file: ${e.message}")
         }
+    }
+
+    override suspend fun getWordCount(htmlContent: String): Int = withContext(Dispatchers.Default) {
+        val text = Jsoup.parse(htmlContent).text()
+        // Count words for both Chinese and English
+        val chineseChars = text.count { it.toString().matches(Regex("[\\u4e00-\\u9fa5]")) }
+        val englishWords = text.split(Regex("\\s+")).filter { 
+            it.isNotBlank() && it.matches(Regex(".*[a-zA-Z].*")) 
+        }.size
         
-        if (coverItem != null) {
-            val imageData = zipEntries[coverItem.href]
-            if (imageData != null) {
-                return saveCoverImage(imageData, epubPath, coverItem.href)
+        chineseChars + englishWords
+    }
+
+    private fun cleanHtmlContent(rawHtml: String): String {
+        // Use Jsoup to clean and format HTML content
+        val document = Jsoup.parse(rawHtml)
+        
+        // Remove unnecessary elements
+        document.select("script, style, meta, link").remove()
+        
+        // Clean with whitelist to keep only basic formatting
+        val safelist = Safelist.relaxed()
+            .addTags("div", "span", "section", "article")
+            .addAttributes("div", "class", "id")
+            .addAttributes("span", "class", "id")
+            .addAttributes("p", "class", "style")
+            .addAttributes("h1", "h2", "h3", "h4", "h5", "h6", "style")
+        
+        return Jsoup.clean(document.html(), safelist)
+    }
+
+    private fun extractTitleFromHtml(htmlContent: String): String? {
+        val document = Jsoup.parse(htmlContent)
+        
+        // Try to find title in various ways
+        val titleSelectors = listOf("h1", "h2", "title", ".chapter-title", "#chapter-title")
+        
+        for (selector in titleSelectors) {
+            val element = document.select(selector).first()
+            if (element != null && element.text().isNotBlank()) {
+                return element.text().trim()
             }
         }
         
         return null
-    }
-    
-    /**
-     * 保存封面图片到本地缓存
-     */
-    private fun saveCoverImage(imageData: ByteArray, epubPath: String, originalPath: String): String? {
-        return try {
-            val cacheDir = File(context.cacheDir, "covers")
-            if (!cacheDir.exists()) {
-                cacheDir.mkdirs()
-            }
-            
-            val extension = File(originalPath).extension.lowercase()
-            val fileName = "${File(epubPath).nameWithoutExtension}_cover.$extension"
-            val coverFile = File(cacheDir, fileName)
-            
-            coverFile.writeBytes(imageData)
-            coverFile.absolutePath
-        } catch (e: Exception) {
-            Timber.e(e, "保存封面图片失败")
-            null
-        }
-    }
-    
-    /**
-     * 获取章节内容
-     */
-    suspend fun getChapterContent(filePath: String, chapterPath: String): String = withContext(Dispatchers.IO) {
-        ZipInputStream(FileInputStream(filePath)).use { zipStream ->
-            var entry: ZipEntry?
-            while (zipStream.nextEntry.also { entry = it } != null) {
-                if (entry?.name == chapterPath) {
-                    val content = zipStream.readBytes().toString(Charsets.UTF_8)
-                    return@withContext processHtmlContent(content)
-                }
-            }
-        }
-        throw FileNotFoundException("章节文件不存在: $chapterPath")
-    }
-    
-    /**
-     * 处理HTML内容，优化为适合墨水屏显示
-     */
-    private fun processHtmlContent(htmlContent: String): String {
-        val doc = Jsoup.parse(htmlContent)
-        
-        // 移除不需要的元素
-        doc.select("script, style, meta, link[rel=stylesheet]").remove()
-        
-        // 优化图片标签
-        doc.select("img").forEach { img ->
-            img.attr("style", "max-width: 100%; height: auto;")
-        }
-        
-        // 简化CSS
-        doc.select("[style]").forEach { element ->
-            element.removeAttr("style")
-        }
-        
-        return doc.html()
-    }
-    
-    /**
-     * 验证EPUB文件
-     */
-    suspend fun validateEpubFile(filePath: String): EpubValidationResult = withContext(Dispatchers.IO) {
-        val errors = mutableListOf<String>()
-        val warnings = mutableListOf<String>()
-        
-        try {
-            val file = File(filePath)
-            
-            // 基本文件检查
-            if (!file.exists()) {
-                errors.add("文件不存在")
-                return@withContext EpubValidationResult(false, errors, warnings)
-            }
-            
-            if (!file.canRead()) {
-                errors.add("文件无法读取")
-                return@withContext EpubValidationResult(false, errors, warnings)
-            }
-            
-            if (file.length() == 0L) {
-                errors.add("文件为空")
-                return@withContext EpubValidationResult(false, errors, warnings)
-            }
-            
-            // EPUB格式检查
-            try {
-                validateEpubFile(file)
-            } catch (e: Exception) {
-                errors.add("EPUB格式错误: ${e.message}")
-            }
-            
-            // 大小检查
-            if (file.length() > 100 * 1024 * 1024) { // 100MB
-                warnings.add("文件较大，解析可能较慢")
-            }
-            
-        } catch (e: Exception) {
-            errors.add("验证过程出错: ${e.message}")
-        }
-        
-        EpubValidationResult(
-            isValid = errors.isEmpty(),
-            errors = errors,
-            warnings = warnings
-        )
     }
 } 

@@ -10,6 +10,14 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Repository for epublib
+        maven {
+            url = uri("https://github.com/psiegman/mvn-repo/raw/master/releases")
+        }
+        // Fallback repositories
+        maven {
+            url = uri("https://jitpack.io")
+        }
     }
 }
 

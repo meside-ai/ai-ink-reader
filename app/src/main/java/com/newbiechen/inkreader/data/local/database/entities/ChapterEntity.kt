@@ -1,27 +1,29 @@
 package com.newbiechen.inkreader.data.local.database.entities
 
-import androidx.room.*
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
 import com.newbiechen.inkreader.domain.entities.Chapter
 
 /**
  * 章节数据库实体类
- * 
- * 包含与图书的外键关联和查询优化索引
  */
 @Entity(
     tableName = "chapters",
     indices = [
         Index(value = ["chapter_id"]),
-        Index(value = ["book_id"]), // 外键索引
-        Index(value = ["book_id", "chapter_index"], unique = true), // 复合唯一索引
-        Index(value = ["chapter_index"])
+        Index(value = ["book_id"]),
+        Index(value = ["order"]),
+        Index(value = ["created_at"])
     ],
     foreignKeys = [
         ForeignKey(
             entity = BookEntity::class,
             parentColumns = ["book_id"],
             childColumns = ["book_id"],
-            onDelete = ForeignKey.CASCADE // 删除图书时级联删除章节
+            onDelete = ForeignKey.CASCADE
         )
     ]
 )
@@ -33,53 +35,48 @@ data class ChapterEntity(
     @ColumnInfo(name = "book_id")
     val bookId: String,
     
-    @ColumnInfo(name = "chapter_index")
-    val chapterIndex: Int,
-    
     @ColumnInfo(name = "title")
     val title: String,
     
-    @ColumnInfo(name = "resource_path")
-    val resourcePath: String,
+    @ColumnInfo(name = "content")
+    val content: String,
     
-    @ColumnInfo(name = "anchor")
-    val anchor: String? = null,
+    @ColumnInfo(name = "order")
+    val order: Int,
     
     @ColumnInfo(name = "word_count")
     val wordCount: Int = 0,
     
-    @ColumnInfo(name = "estimated_reading_time")
-    val estimatedReadingTime: Int = 0
+    @ColumnInfo(name = "created_at")
+    val createdAt: Long = System.currentTimeMillis()
 )
 
 /**
- * 扩展函数：Entity转换为Domain对象
+ * Entity转换为Domain对象
  */
 fun ChapterEntity.toDomain(): Chapter {
     return Chapter(
         chapterId = chapterId,
         bookId = bookId,
-        chapterIndex = chapterIndex,
         title = title,
-        resourcePath = resourcePath,
-        anchor = anchor,
+        content = content,
+        order = order,
         wordCount = wordCount,
-        estimatedReadingTime = estimatedReadingTime
+        createdAt = createdAt
     )
 }
 
 /**
- * 扩展函数：Domain对象转换为Entity
+ * Domain对象转换为Entity
  */
 fun Chapter.toEntity(): ChapterEntity {
     return ChapterEntity(
         chapterId = chapterId,
         bookId = bookId,
-        chapterIndex = chapterIndex,
         title = title,
-        resourcePath = resourcePath,
-        anchor = anchor,
+        content = content,
+        order = order,
         wordCount = wordCount,
-        estimatedReadingTime = estimatedReadingTime
+        createdAt = createdAt
     )
 } 

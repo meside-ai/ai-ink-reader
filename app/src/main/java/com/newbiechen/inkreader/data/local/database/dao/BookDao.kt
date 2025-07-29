@@ -1,49 +1,14 @@
 package com.newbiechen.inkreader.data.local.database.dao
 
 import androidx.room.*
-import kotlinx.coroutines.flow.Flow
 import com.newbiechen.inkreader.data.local.database.entities.BookEntity
+import kotlinx.coroutines.flow.Flow
 
 /**
  * 图书数据访问对象
- * 
- * 定义图书相关的数据库操作方法，支持响应式查询和事务处理
  */
 @Dao
 interface BookDao {
-    
-    /**
-     * 获取所有未删除的图书（响应式）
-     * 按最后打开时间降序排列
-     */
-    @Query("""
-        SELECT * FROM books 
-        WHERE is_deleted = 0 
-        ORDER BY last_opened_at DESC
-    """)
-    fun getAllBooksFlow(): Flow<List<BookEntity>>
-    
-    /**
-     * 获取所有未删除的图书（一次性查询）
-     */
-    @Query("""
-        SELECT * FROM books 
-        WHERE is_deleted = 0 
-        ORDER BY last_opened_at DESC
-    """)
-    suspend fun getAllBooks(): List<BookEntity>
-    
-    /**
-     * 根据ID获取图书
-     */
-    @Query("SELECT * FROM books WHERE book_id = :bookId AND is_deleted = 0")
-    suspend fun getBookById(bookId: String): BookEntity?
-    
-    /**
-     * 根据文件路径获取图书
-     */
-    @Query("SELECT * FROM books WHERE file_path = :filePath")
-    suspend fun getBookByFilePath(filePath: String): BookEntity?
     
     /**
      * 插入图书
@@ -58,102 +23,99 @@ interface BookDao {
     suspend fun insertBooks(books: List<BookEntity>): List<Long>
     
     /**
-     * 更新图书信息
+     * 更新图书
      */
     @Update
     suspend fun updateBook(book: BookEntity): Int
     
     /**
-     * 更新图书最后打开时间
+     * 根据ID删除图书（软删除）
      */
-    @Query("""
-        UPDATE books 
-        SET last_opened_at = :timestamp 
-        WHERE book_id = :bookId
-    """)
-    suspend fun updateLastOpenedTime(bookId: String, timestamp: Long): Int
+    @Query("UPDATE books SET is_deleted = 1 WHERE book_id = :bookId")
+    suspend fun deleteBookById(bookId: String): Int
     
     /**
-     * 软删除图书
+     * 根据ID获取图书
      */
-    @Query("""
-        UPDATE books 
-        SET is_deleted = 1 
-        WHERE book_id = :bookId
-    """)
-    suspend fun softDeleteBook(bookId: String): Int
+    @Query("SELECT * FROM books WHERE book_id = :bookId AND is_deleted = 0")
+    suspend fun getBookById(bookId: String): BookEntity?
     
     /**
-     * 物理删除图书
+     * 获取所有图书（流式）
      */
-    @Delete
-    suspend fun deleteBook(book: BookEntity): Int
+    @Query("SELECT * FROM books WHERE is_deleted = 0 ORDER BY created_at DESC")
+    fun getAllBooksFlow(): Flow<List<BookEntity>>
     
     /**
-     * 搜索图书（按标题和作者）
+     * 获取所有图书（一次性）
+     */
+    @Query("SELECT * FROM books WHERE is_deleted = 0 ORDER BY created_at DESC")
+    suspend fun getAllBooks(): List<BookEntity>
+    
+    /**
+     * 根据标题搜索图书
      */
     @Query("""
         SELECT * FROM books 
         WHERE is_deleted = 0 
-        AND (title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%')
+        AND (title LIKE '%' || :query || '%' 
+             OR author LIKE '%' || :query || '%'
+             OR file_path LIKE '%' || :query || '%')
         ORDER BY 
             CASE 
-                WHEN title LIKE :query || '%' THEN 1
-                WHEN author LIKE :query || '%' THEN 2
+                WHEN title LIKE '%' || :query || '%' THEN 1
+                WHEN author LIKE '%' || :query || '%' THEN 2
                 ELSE 3
             END,
-            last_opened_at DESC
+            created_at DESC
     """)
     suspend fun searchBooks(query: String): List<BookEntity>
     
     /**
-     * 获取最近阅读的图书
+     * 根据作者获取图书
      */
-    @Query("""
-        SELECT * FROM books 
-        WHERE is_deleted = 0 
-        ORDER BY last_opened_at DESC 
-        LIMIT :limit
-    """)
-    suspend fun getRecentBooks(limit: Int): List<BookEntity>
+    @Query("SELECT * FROM books WHERE author = :author AND is_deleted = 0 ORDER BY created_at DESC")
+    suspend fun getBooksByAuthor(author: String): List<BookEntity>
     
     /**
-     * 检查文件路径是否已存在
+     * 根据文件路径获取图书
      */
-    @Query("SELECT COUNT(*) FROM books WHERE file_path = :filePath")
-    suspend fun isFilePathExists(filePath: String): Int
+    @Query("SELECT * FROM books WHERE file_path = :filePath AND is_deleted = 0")
+    suspend fun getBookByFilePath(filePath: String): BookEntity?
+    
+    /**
+     * 检查图书是否存在
+     */
+    @Query("SELECT COUNT(*) > 0 FROM books WHERE file_path = :filePath AND is_deleted = 0")
+    suspend fun bookExists(filePath: String): Boolean
     
     /**
      * 获取图书总数
      */
     @Query("SELECT COUNT(*) FROM books WHERE is_deleted = 0")
-    suspend fun getBookCount(): Int
+    suspend fun getBooksCount(): Int
     
     /**
-     * 获取图书统计信息
+     * 获取最近添加的图书
      */
-    @Query("""
-        SELECT 
-            COUNT(*) as total_books,
-            SUM(file_size) as total_size,
-            AVG(file_size) as avg_size
-        FROM books 
-        WHERE is_deleted = 0
-    """)
-    suspend fun getBookStatistics(): BookStatistics?
+    @Query("SELECT * FROM books WHERE is_deleted = 0 ORDER BY created_at DESC LIMIT :limit")
+    suspend fun getRecentBooks(limit: Int = 10): List<BookEntity>
+    
+    /**
+     * 获取最近阅读的图书
+     */
+    @Query("SELECT * FROM books WHERE is_deleted = 0 ORDER BY last_opened_at DESC LIMIT :limit")
+    suspend fun getRecentlyReadBooks(limit: Int = 10): List<BookEntity>
+    
+    /**
+     * 更新图书最后打开时间
+     */
+    @Query("UPDATE books SET last_opened_at = :lastOpenedAt WHERE book_id = :bookId")
+    suspend fun updateLastOpenedTime(bookId: String, lastOpenedAt: Long = System.currentTimeMillis()): Int
     
     /**
      * 清理已删除的图书（物理删除）
      */
     @Query("DELETE FROM books WHERE is_deleted = 1")
     suspend fun cleanupDeletedBooks(): Int
-}
-
-/**
- * 图书统计信息数据类
- */
-data class BookStatistics(
-    val totalBooks: Int,
-    val totalSize: Long,
-    val avgSize: Long
-) 
+} 

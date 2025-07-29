@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
+    id("kotlin-parcelize")
 }
 
 android {
@@ -18,45 +19,17 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        // MVP版本标识
-        buildConfigField("String", "BUILD_TYPE", "\"MVP\"")
-        buildConfigField("boolean", "IS_DEBUG_BUILD", "false")
-    }
-
-    signingConfigs {
-        create("release") {
-            // 开发阶段使用debug签名，简化流程
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
+        // Read OpenAI API key from gradle.properties
+        buildConfigField("String", "OPENAI_API_KEY", "\"${project.findProperty("OPENAI_API_KEY") ?: ""}\"")
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
-        }
-        
-        debug {
-            applicationIdSuffix = ".debug"
-            isDebuggable = true
-            buildConfigField("boolean", "IS_DEBUG_BUILD", "true")
-        }
-    }
-
-    // 简化的构建变体 - 只保留必要的
-    flavorDimensions += "version"
-    productFlavors {
-        create("mvp") {
-            dimension = "version"
-            versionNameSuffix = "-mvp"
         }
     }
 
@@ -71,68 +44,64 @@ android {
     
     buildFeatures {
         buildConfig = true
-        viewBinding = true
     }
 }
 
 dependencies {
     // Android Core
-    implementation(Dependencies.Android.coreKtx)
-    implementation(Dependencies.Android.lifecycleRuntimeKtx)
-    implementation(Dependencies.Android.lifecycleViewModelKtx)
-    implementation(Dependencies.Android.lifecycleLiveDataKtx)
-    implementation(Dependencies.Android.activityKtx)
-    implementation(Dependencies.Android.fragmentKtx)
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
     
-    // UI & Material Design
-    implementation(Dependencies.UI.material)
-    implementation(Dependencies.UI.constraintLayout)
-    implementation(Dependencies.UI.recyclerView)
-    
-    // Room Database
-    implementation(Dependencies.Room.runtime)
-    implementation(Dependencies.Room.ktx)
-    ksp(Dependencies.Room.compiler)
-    
-    // Hilt Dependency Injection
-    implementation(Dependencies.Hilt.android)
-    ksp(Dependencies.Hilt.compiler)
-    
-    // Network
-    implementation(Dependencies.Network.retrofit)
-    implementation(Dependencies.Network.retrofitGson)
-    implementation(Dependencies.Network.okhttp)
-    implementation(Dependencies.Network.okhttpLogging)
-    implementation(Dependencies.Network.gson)
+    // Architecture Components  
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     
     // Coroutines
-    implementation(Dependencies.Coroutines.core)
-    implementation(Dependencies.Coroutines.android)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     
-    // EPUB Processing
-    implementation(Dependencies.Epub.epublib)
+    // Hilt Dependency Injection
+    implementation("com.google.dagger:hilt-android:2.48")
+    ksp("com.google.dagger:hilt-compiler:2.48")
     
-    // Image Loading
-    implementation(Dependencies.Image.glide)
-    ksp(Dependencies.Image.glideCompiler)
+    // Room Database
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
     
-    // Security
-    implementation(Dependencies.Security.sqlcipher)
+    // EPUB Processing - Phase 1 Dependencies
+    implementation("nl.siegmann.epublib:epublib-core:3.1") {
+        exclude(group = "xmlpull", module = "xmlpull")
+        exclude(group = "net.sf.kxml", module = "kxml2")
+        exclude(group = "org.slf4j", module = "slf4j-simple")
+    }
+    implementation("org.jsoup:jsoup:1.17.2") // HTML parsing for EPUB content
     
-    // Debug Tools (only in debug builds)
-    debugImplementation(Dependencies.Debug.leakCanary)
-    implementation(Dependencies.Debug.timber)
+    // File Selection and Management
+    implementation("androidx.activity:activity-ktx:1.8.2")
+    implementation("androidx.documentfile:documentfile:1.0.1")
+    
+    // WebView for EPUB content display
+    implementation("androidx.webkit:webkit:1.9.0")
+    
+    // Image Loading for EPUB covers and content
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    ksp("com.github.bumptech.glide:compiler:4.16.0")
+    
+    // Network Libraries for OpenAI API - Phase 2 Dependencies
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.google.code.gson:gson:2.10.1")
     
     // Testing
-    testImplementation(Dependencies.Testing.junit)
-    testImplementation(Dependencies.Testing.mockito)
-    testImplementation(Dependencies.Testing.mockitoKotlin)
-    testImplementation(Dependencies.Testing.truth)
-    testImplementation(Dependencies.Testing.coroutinesTest)
-    testImplementation(Dependencies.Testing.roomTesting)
-    
-    // Android Testing
-    androidTestImplementation(Dependencies.Testing.junitExt)
-    androidTestImplementation(Dependencies.Testing.espressoCore)
-    androidTestImplementation(Dependencies.Testing.hiltTesting)
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 } 

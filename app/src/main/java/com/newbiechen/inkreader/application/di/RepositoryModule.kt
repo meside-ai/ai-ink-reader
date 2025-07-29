@@ -1,24 +1,22 @@
 package com.newbiechen.inkreader.application.di
 
+import com.newbiechen.inkreader.data.repositories.BookRepositoryImpl
+import com.newbiechen.inkreader.domain.repositories.BookRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
-import com.newbiechen.inkreader.domain.repositories.BookRepository
-import com.newbiechen.inkreader.data.repositories.BookRepositoryImpl
 
 /**
- * Repository依赖注入模块
- * 
- * 绑定Domain层Repository接口与Data层具体实现
+ * 仓库依赖注入模块
  */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
     
     /**
-     * 绑定BookRepository实现
+     * 绑定图书仓库实现
      */
     @Binds
     @Singleton

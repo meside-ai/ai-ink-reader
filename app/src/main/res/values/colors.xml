@@ -1,80 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 墨水屏友好的配色方案 - 主要使用黑白灰色系 -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="ic_launcher_background">#FFFFFFFF</color>
     
-    <!-- 主色调 - 深灰色系 -->
-    <color name="primary_color">#FF424242</color>
-    <color name="on_primary_color">#FFFFFFFF</color>
-    <color name="primary_container_color">#FFE0E0E0</color>
-    <color name="on_primary_container_color">#FF212121</color>
+    <!-- Text colors -->
+    <color name="text_primary">#FF212121</color>
+    <color name="text_secondary">#FF757575</color>
+    <color name="text_hint">#FF9E9E9E</color>
     
-    <!-- 次要色调 - 中性灰 -->
-    <color name="secondary_color">#FF757575</color>
-    <color name="on_secondary_color">#FFFFFFFF</color>
-    <color name="secondary_container_color">#FFF5F5F5</color>
-    <color name="on_secondary_container_color">#FF424242</color>
-    
-    <!-- 背景色 - 接近纸张的白色 -->
+    <!-- Background colors -->
+    <color name="background_primary">#FFFFFFFF</color>
+    <color name="background_secondary">#FFF5F5F5</color>
     <color name="background_color">#FFFEFEFE</color>
     <color name="on_background_color">#FF212121</color>
     <color name="surface_color">#FFFFFFFF</color>
     <color name="on_surface_color">#FF212121</color>
     
-    <!-- 窗口背景 -->
-    <color name="window_background_color">#FFFEFEFE</color>
-    
-    <!-- 状态栏和导航栏 -->
+    <!-- Status bar -->
+    <color name="status_bar_background">#FFF0F0F0</color>
     <color name="status_bar_color">#FFF5F5F5</color>
     <color name="navigation_bar_color">#FFFFFFFF</color>
+    <color name="window_background_color">#FFFEFEFE</color>
     
-    <!-- 阅读界面专用色 -->
-    <color name="reading_background_color">#FFFDFDF5</color> <!-- 温和的米白色 -->
-    <color name="reading_text_color">#FF1A1A1A</color> <!-- 深灰黑，减少眼疲劳 -->
+    <!-- Divider -->
+    <color name="divider_color">#FFE0E0E0</color>
     
-    <!-- Splash Screen -->
+    <!-- Button colors -->
+    <color name="primary_color">#FF2196F3</color>
+    <color name="on_primary_color">#FFFFFFFF</color>
+    <color name="primary_container_color">#FFE3F2FD</color>
+    <color name="on_primary_container_color">#FF212121</color>
+    
+    <!-- Secondary colors -->
+    <color name="secondary_color">#FF757575</color>
+    <color name="on_secondary_color">#FFFFFFFF</color>
+    <color name="secondary_container_color">#FFF5F5F5</color>
+    <color name="on_secondary_container_color">#FF424242</color>
+    
+    <!-- Reading specific colors -->
+    <color name="reading_background_color">#FFFDFDF5</color>
+    
+    <!-- Splash screen -->
     <color name="splash_background_color">#FFFFFFFF</color>
     
-    <!-- 功能性颜色 -->
+    <!-- Error color -->
     <color name="error_color">#FFB00020</color>
-    <color name="on_error_color">#FFFFFFFF</color>
-    <color name="success_color">#FF4CAF50</color>
-    <color name="warning_color">#FFFF9800</color>
-    
-    <!-- 分割线和边框 -->
-    <color name="divider_color">#FFE0E0E0</color>
-    <color name="border_color">#FFBDBDBD</color>
-    
-    <!-- 文本颜色层级 -->
-    <color name="text_primary">#FF212121</color>
-    <color name="text_secondary">#FF757575</color>
-    <color name="text_disabled">#FFBDBDBD</color>
-    <color name="text_hint">#FF9E9E9E</color>
-    
-    <!-- 卡片和容器 -->
-    <color name="card_background">#FFFFFFFF</color>
-    <color name="card_shadow">#1A000000</color>
-    
-    <!-- 按钮状态 -->
-    <color name="button_pressed">#FFE0E0E0</color>
-    <color name="button_disabled">#FFF5F5F5</color>
-    
-    <!-- 选择状态 -->
-    <color name="selected_item_background">#FFE8F5E8</color>
-    <color name="ripple_color">#1F000000</color>
-    
-    <!-- 阅读进度 -->
-    <color name="progress_color">#FF424242</color>
-    <color name="progress_background">#FFE0E0E0</color>
-    
-    <!-- 透明度变体 -->
-    <color name="black_alpha_12">#1F000000</color>
-    <color name="black_alpha_24">#3D000000</color>
-    <color name="black_alpha_54">#8A000000</color>
-    <color name="black_alpha_87">#DE000000</color>
-    
-    <color name="white_alpha_12">#1FFFFFFF</color>
-    <color name="white_alpha_24">#3DFFFFFF</color>
-    <color name="white_alpha_54">#8AFFFFFF</color>
-    <color name="white_alpha_87">#DEFFFFFF</color>
-    
 </resources> 

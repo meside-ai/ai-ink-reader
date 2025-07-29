@@ -3,76 +3,58 @@ package com.newbiechen.inkreader.domain.usecases.base
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.Flow
 
 /**
- * Use Case基类
- *
- * 提供统一的用例执行模式，确保所有业务逻辑都在后台线程执行
+ * 基础UseCase抽象类
+ * 提供统一的执行框架和错误处理
  */
 abstract class UseCase<in P, R>(
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-
+    
     /**
-     * 执行用例
-     *
-     * @param parameters 用例参数
-     * @return 执行结果
+     * 执行UseCase
      */
     suspend operator fun invoke(parameters: P): Result<R> {
         return try {
             withContext(coroutineDispatcher) {
-                execute(parameters).let { Result.success(it) }
+                execute(parameters).let {
+                    Result.success(it)
+                }
             }
-        } catch (exception: Exception) {
-            Result.failure(exception)
+        } catch (e: Exception) {
+            android.util.Log.e(this::class.simpleName, "UseCase执行失败", e)
+            Result.failure(e)
         }
     }
-
+    
     /**
-     * 具体的用例执行逻辑，由子类实现
+     * UseCase具体实现
      */
     @Throws(RuntimeException::class)
     protected abstract suspend fun execute(parameters: P): R
 }
 
 /**
- * 无参数的Use Case基类
+ * 无参数UseCase
  */
-abstract class NoParameterUseCase<R>(
-    coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
-) : UseCase<Unit, R>(coroutineDispatcher) {
-
-    suspend operator fun invoke(): Result<R> {
-        return invoke(Unit)
-    }
-}
-
-/**
- * Flow Use Case基类
- *
- * 用于返回Flow类型的用例，通常用于观察数据变化
- */
-abstract class FlowUseCase<in P, R>(
+abstract class UseCase0<R>(
     private val coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-
-    suspend operator fun invoke(parameters: P): Flow<R> = withContext(coroutineDispatcher) {
-        execute(parameters)
+    
+    suspend operator fun invoke(): Result<R> {
+        return try {
+            withContext(coroutineDispatcher) {
+                execute().let {
+                    Result.success(it)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e(this::class.simpleName, "UseCase执行失败", e)
+            Result.failure(e)
+        }
     }
-
-    protected abstract suspend fun execute(parameters: P): Flow<R>
-}
-
-/**
- * 无参数的Flow Use Case基类
- */
-abstract class NoParameterFlowUseCase<R>(
-    coroutineDispatcher: CoroutineDispatcher = Dispatchers.IO
-) : FlowUseCase<Unit, R>(coroutineDispatcher) {
-
-    suspend operator fun invoke(): Flow<R> {
-        return invoke(Unit)
-    }
+    
+    @Throws(RuntimeException::class)
+    protected abstract suspend fun execute(): R
 } 

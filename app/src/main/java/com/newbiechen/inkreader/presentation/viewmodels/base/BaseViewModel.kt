@@ -1,145 +1,74 @@
 package com.newbiechen.inkreader.presentation.viewmodels.base
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import timber.log.Timber
 
 /**
- * ViewModel基类
- * 
- * 提供统一的状态管理、错误处理和协程管理
+ * 基础ViewModel抽象类
+ * 提供统一的错误处理和状态管理
  */
 abstract class BaseViewModel : ViewModel() {
     
     // 加载状态
-    private val _isLoading = MutableLiveData<Boolean>()
-    val isLoading: LiveData<Boolean> = _isLoading
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     
-    // 错误信息
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> = _error
+    // 错误状态
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
     
-    // 成功消息
-    private val _successMessage = MutableLiveData<String?>()
-    val successMessage: LiveData<String?> = _successMessage
-    
-    // 活跃的协程任务
-    private val activeJobs = mutableSetOf<Job>()
-    
-    /**
-     * 统一的协程异常处理器
-     */
-    protected val coroutineExceptionHandler = CoroutineExceptionHandler { _, exception ->
-        Timber.e(exception, "协程执行异常")
-        _isLoading.postValue(false)
-        handleError(exception)
+    // 异常处理器
+    private val exceptionHandler = CoroutineExceptionHandler { _, exception ->
+        android.util.Log.e(this::class.simpleName, "ViewModel异常", exception)
+        _error.value = exception.message ?: "未知错误"
+        _isLoading.value = false
     }
     
     /**
-     * 安全执行协程任务
+     * 安全执行协程
      */
-    protected fun launchSafely(
+    protected fun launchSafe(
         showLoading: Boolean = true,
-        onError: ((Throwable) -> Unit)? = null,
         block: suspend CoroutineScope.() -> Unit
-    ): Job {
-        if (showLoading) {
-            _isLoading.value = true
-        }
-        
-        val job = viewModelScope.launch(coroutineExceptionHandler) {
+    ) {
+        viewModelScope.launch(exceptionHandler) {
             try {
+                if (showLoading) _isLoading.value = true
+                _error.value = null
                 block()
             } catch (e: Exception) {
-                Timber.e(e, "执行任务异常")
-                onError?.invoke(e) ?: handleError(e)
+                android.util.Log.e(this@BaseViewModel::class.simpleName, "执行失败", e)
+                _error.value = e.message ?: "操作失败"
             } finally {
-                if (showLoading) {
-                    _isLoading.postValue(false)
-                }
+                if (showLoading) _isLoading.value = false
             }
         }
-        
-        activeJobs.add(job)
-        job.invokeOnCompletion { activeJobs.remove(job) }
-        
-        return job
     }
     
     /**
-     * 处理错误
-     */
-    protected open fun handleError(throwable: Throwable) {
-        val errorMessage = when (throwable) {
-            is IllegalArgumentException -> throwable.message ?: "参数错误"
-            is IllegalStateException -> throwable.message ?: "状态错误"
-            is java.io.FileNotFoundException -> "文件不存在"
-            is java.io.IOException -> "文件读写错误"
-            is java.net.ConnectException -> "网络连接失败"
-            is java.net.SocketTimeoutException -> "网络请求超时"
-            else -> throwable.message ?: "未知错误"
-        }
-        
-        Timber.w("处理错误: $errorMessage")
-        _error.postValue(errorMessage)
-    }
-    
-    /**
-     * 设置错误信息
-     */
-    protected fun setError(message: String) {
-        _error.postValue(message)
-    }
-    
-    /**
-     * 清除错误信息
+     * 清除错误状态
      */
     fun clearError() {
-        _error.postValue(null)
+        _error.value = null
     }
     
     /**
-     * 设置成功消息
+     * 显示错误信息
      */
-    protected fun setSuccessMessage(message: String) {
-        _successMessage.postValue(message)
+    protected fun showError(message: String) {
+        _error.value = message
     }
     
     /**
-     * 清除成功消息
+     * 显示加载状态
      */
-    fun clearSuccessMessage() {
-        _successMessage.postValue(null)
-    }
-    
-    /**
-     * 设置加载状态
-     */
-    protected fun setLoading(isLoading: Boolean) {
-        _isLoading.postValue(isLoading)
-    }
-    
-    /**
-     * 取消所有活跃任务
-     */
-    protected fun cancelAllJobs() {
-        activeJobs.forEach { job ->
-            if (job.isActive) {
-                job.cancel()
-            }
-        }
-        activeJobs.clear()
-    }
-    
-    override fun onCleared() {
-        super.onCleared()
-        cancelAllJobs()
-        Timber.d("${this::class.simpleName} cleared")
+    protected fun showLoading(loading: Boolean) {
+        _isLoading.value = loading
     }
 } 
